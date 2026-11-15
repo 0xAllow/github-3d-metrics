@@ -1,0 +1,12 @@
+{
+  "view": "combined",
+  "theme": "midnight",
+  "width": 1000,
+  "height": 480,
+  "accent": "#9BB6FF",
+  "accent2": "",
+  "background": "",
+  "style": "solid",
+  "metrics": ["followers", "repositories", "stars"],
+  "showUpdated": true
+}

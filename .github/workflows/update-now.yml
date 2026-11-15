@@ -1,0 +1,24 @@
+name: Update Now
+on:
+  workflow_dispatch:
+    inputs:
+      username:
+        description: GitHub username
+        required: true
+        default: 0xAllow
+      options:
+        description: Visualization settings as JSON
+        default: '{}'
+      light-pair:
+        description: Also generate a light SVG
+        type: boolean
+        default: false
+permissions:
+  contents: write
+jobs:
+  generate:
+    uses: ./.github/workflows/update-reusable.yml
+    with:
+      username: ${{ inputs.username }}
+      options: ${{ inputs.options }}
+      light-pair: ${{ inputs.light-pair }}

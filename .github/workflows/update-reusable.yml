@@ -1,0 +1,73 @@
+name: Reusable metrics generator
+on:
+  workflow_call:
+    secrets:
+      calendar-token:
+        description: Optional public-data-only GitHub token
+        required: false
+    inputs:
+      username:
+        required: true
+        type: string
+      options:
+        default: '{}'
+        type: string
+      light-pair:
+        default: false
+        type: boolean
+permissions:
+  contents: write
+concurrency:
+  group: github-3d-metrics-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Require a public profile repository and branch
+        env:
+          VISIBILITY: ${{ github.event.repository.visibility }}
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          if [[ "$VISIBILITY" != public || "$REF_TYPE" != branch ]]; then
+            echo "::error::Run Update Now on a branch of a public repository."
+            exit 1
+          fi
+      - uses: actions/checkout@v6
+        with:
+          path: profile
+          persist-credentials: false
+      - uses: actions/checkout@v6
+        with:
+          repository: 0xAllow/github-3d-metrics
+          ref: main
+          path: engine
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Fetch and render
+        env:
+          GITHUB_TOKEN: ${{ secrets.calendar-token || github.token }}
+          METRICS_USERNAME: ${{ inputs.username }}
+          METRICS_OPTIONS: ${{ inputs.options }}
+          METRICS_LIGHT_PAIR: ${{ inputs.light-pair }}
+        run: node engine/src/cli.ts --root profile
+      - name: Commit changed assets
+        working-directory: profile
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: '1'
+        run: |
+          git add -- assets/github-3d-metrics.svg assets/github-3d-metrics.json
+          if [[ -f assets/github-3d-metrics-light.svg ]]; then
+            git add -- assets/github-3d-metrics-light.svg
+          fi
+          if git diff --cached --quiet; then
+            echo 'Metrics unchanged.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m "Update GitHub 3D Metrics"
+          git -c credential.helper= -c credential.helper='!gh auth git-credential' push origin "HEAD:${GITHUB_REF}"
+          echo 'Updated and pushed GitHub 3D Metrics assets.' >> "$GITHUB_STEP_SUMMARY"
