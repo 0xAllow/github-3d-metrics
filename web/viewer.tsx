@@ -12,7 +12,7 @@ function Controls() {
     controls.minZoom = .55
     controls.maxZoom = 3
     controls.maxPolarAngle = Math.PI / 2.05
-    controls.addEventListener('change', invalidate)
+    controls.addEventListener('change', () => invalidate())
     controls.update()
     return () => controls.dispose()
   }, [camera, gl, invalidate])
