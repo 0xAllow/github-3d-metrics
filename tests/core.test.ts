@@ -25,6 +25,7 @@ test('renders all 42 visualization and theme combinations deterministically', ()
     const svg = renderSvg(sample, settings)
     assert.match(svg, /^<svg /)
     assert.doesNotMatch(svg, /<script|foreignObject|NaN|Infinity/)
+    assert.doesNotMatch(svg, / \& /)
     assert.ok(Buffer.byteLength(svg) < 110_000)
     assert.equal(svg, renderSvg(sample, settings))
   }
