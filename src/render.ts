@@ -123,7 +123,7 @@ export function renderSvg(data: unknown, options: unknown = {}): string {
     constellation: 'TOP PUBLIC REPOSITORIES BY STARS', timeline: 'WEEKLY ACTIVITY', combined: 'PROFILE & DAILY ACTIVITY'
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${c.width}" height="${c.height}" viewBox="0 0 1000 480" role="img" aria-labelledby="title desc" font-family="system-ui, sans-serif">
-<title id="title">${views[c.view]} for @${s.login}</title><desc id="desc">GitHub metrics · ${caption[c.view]}</desc>
+<title id="title">${views[c.view]} for @${s.login}</title><desc id="desc">GitHub metrics · ${escape(caption[c.view])}</desc>
 ${c.theme === 'transparent' ? '<style>svg{--fg:#152842;--muted:#364d69}@media(prefers-color-scheme:dark){svg{--fg:#edf5ff;--muted:#a9b9d0}}</style>' : ''}
 <defs><radialGradient id="orb" cx=".32" cy=".28"><stop stop-color="${accent}"/><stop offset="1" stop-color="${secondary}"/></radialGradient><linearGradient id="area" x1="0%" y1="0%" x2="0%" y2="100%"><stop stop-color="${secondary}" stop-opacity=".65"/><stop offset="1" stop-color="${secondary}" stop-opacity=".04"/></linearGradient><pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".7" fill="${accent}" opacity=".12"/></pattern></defs>
 <rect x="1" y="1" width="998" height="478" rx="22" fill="${bg}" stroke="${accent}" stroke-opacity=".32"/><rect x="12" y="12" width="976" height="456" rx="16" fill="url(#dots)"/>
