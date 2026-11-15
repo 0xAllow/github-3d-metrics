@@ -37,6 +37,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           path: profile
+          ref: ${{ github.ref }}
           persist-credentials: false
       - uses: actions/checkout@v6
         with:
@@ -47,27 +48,44 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
-      - name: Fetch and render
+      - name: Generate and publish changed assets
+        working-directory: profile
         env:
           GITHUB_TOKEN: ${{ secrets.calendar-token || github.token }}
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: '1'
           METRICS_USERNAME: ${{ inputs.username }}
           METRICS_OPTIONS: ${{ inputs.options }}
           METRICS_LIGHT_PAIR: ${{ inputs.light-pair }}
-        run: node engine/src/cli.ts --root profile
-      - name: Commit changed assets
-        working-directory: profile
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_PROMPT_DISABLED: '1'
         run: |
-          git add -- assets/github-3d-metrics.svg assets/github-3d-metrics.json
-          if [[ -f assets/github-3d-metrics-light.svg ]]; then
-            git add -- assets/github-3d-metrics-light.svg
-          fi
-          if git diff --cached --quiet; then
-            echo 'Metrics unchanged.' >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m "Update GitHub 3D Metrics"
-          git -c credential.helper= -c credential.helper='!gh auth git-credential' push origin "HEAD:${GITHUB_REF}"
-          echo 'Updated and pushed GitHub 3D Metrics assets.' >> "$GITHUB_STEP_SUMMARY"
+          authenticated_git() {
+            git -c credential.helper= -c credential.helper='!gh auth git-credential' "$@"
+          }
+          for attempt in 1 2 3; do
+            authenticated_git fetch --no-tags --depth=1 origin "$GITHUB_REF"
+            base="$(git rev-parse FETCH_HEAD)"
+            # This checkout is disposable. Regenerate from the latest committed assets.
+            git checkout --detach --force "$base"
+            node ../engine/src/cli.ts --root .
+            git add -- assets/github-3d-metrics.svg assets/github-3d-metrics.json
+            if [[ -f assets/github-3d-metrics-light.svg ]]; then
+              git add -- assets/github-3d-metrics-light.svg
+            fi
+            if git diff --cached --quiet; then
+              echo 'Metrics unchanged.' >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m "Update GitHub 3D Metrics"
+            if authenticated_git push origin "HEAD:${GITHUB_REF}"; then
+              echo 'Updated and pushed GitHub 3D Metrics assets.' >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            remote="$(authenticated_git ls-remote --exit-code origin "$GITHUB_REF")"
+            if [[ "${remote%%$'\t'*}" == "$base" ]]; then
+              echo "::error::Push failed without a branch update. Check repository permissions and branch protection."
+              exit 1
+            fi
+            echo "Branch advanced during attempt $attempt."
+          done
+          echo "::error::Branch kept changing. Run Update Now again."
+          exit 1
